@@ -145,7 +145,7 @@ fn main() {
     framebuffer.set_background_color(0x000011);
 
     // Cargar el modelo de la esfera una sola vez
-    let obj = Obj::load("assets/models/sphere.obj").expect("Failed to load obj");
+    let obj = Obj::load("assets/models/sphere_smooth.obj").expect("Failed to load obj");
     let vertex_arrays = obj.get_vertex_array();
 
     // Crear 3 planetas con diferentes características
