@@ -23,7 +23,7 @@ pub fn gaseous_shader(fragment: &Fragment, base_color: Color, time: f32) -> Colo
     let x = fragment.position.x; 
     let y = fragment.position.y; 
     // Crear bandas horizontales con movimiento 
-    let bands = ((y * 0.03 + time * 0.5).sin() * 0.5 + 0.5); 
+    let bands = (y * 0.03 + time * 0.5).sin() * 0.5 + 0.5; 
     // Agregar turbulencia 
     let turbulence = fbm(x * 0.02 + time, y * 0.02, 3); 
     // Combinar efectos 
