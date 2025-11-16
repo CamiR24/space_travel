@@ -1,4 +1,4 @@
-use nalgebra_glm::{Vec3, Mat4};
+use nalgebra_glm::{Vec3, Vec4, Mat4};
 use minifb::{Key, Window, WindowOptions};
 use std::time::{Duration, Instant};
 use std::f32::consts::PI;
@@ -94,8 +94,19 @@ fn render(
     color: u32,
     planet_type: PlanetType,
     time: f32,
-    sun_position: Vec3
+    sun_world_position: Vec3
 ) {
+    // Transformar posición del sol a espacio de pantalla para iluminación correcta
+    let sun_pos_4 = Vec4::new(sun_world_position.x, sun_world_position.y, sun_world_position.z, 1.0);
+    let sun_clip = uniforms.projection_matrix * uniforms.view_matrix * sun_pos_4;
+    let sun_ndc = Vec3::new(
+        sun_clip.x / sun_clip.w,
+        sun_clip.y / sun_clip.w,
+        sun_clip.z / sun_clip.w
+    );
+    let sun_screen_4 = uniforms.viewport_matrix * Vec4::new(sun_ndc.x, sun_ndc.y, sun_ndc.z, 1.0);
+    let sun_screen_position = Vec3::new(sun_screen_4.x, sun_screen_4.y, sun_screen_4.z);
+
     let mut transformed_vertices = Vec::with_capacity(vertex_array.len());
     for vertex in vertex_array {
         let mut transformed = vertex_shader(vertex, uniforms);
@@ -116,7 +127,7 @@ fn render(
 
     let mut fragments = Vec::new();
     for tri in &triangles {
-        fragments.extend(triangle(&tri[0], &tri[1], &tri[2], &sun_position));
+        fragments.extend(triangle(&tri[0], &tri[1], &tri[2], &sun_screen_position));
     }
 
     for fragment in fragments {
@@ -160,15 +171,15 @@ fn main() {
     let sphere_obj = Obj::load("assets/models/sphere_smooth.obj").expect("Failed to load sphere");
     let vertex_arrays = sphere_obj.get_vertex_array();
 
-    // Crear cámara
+    // Crear cámara - mirando desde atrás hacia el origen
     let mut camera = Camera::new(
-        Vec3::new(600.0, 400.0, 300.0),  // eye
-        Vec3::new(600.0, 400.0, 0.0),    // center (centro del sistema)
-        Vec3::new(0.0, 1.0, 0.0),        // up
+        Vec3::new(0.0, 0.0, 500.0),  // eye - detrás en Z
+        Vec3::new(0.0, 0.0, 0.0),    // center - origen
+        Vec3::new(0.0, 1.0, 0.0),    // up
     );
 
-    // Configuración del sistema solar
-    let center = Vec3::new(600.0, 400.0, 0.0);
+    // Configuración del sistema solar - centrado en el origen
+    let center = Vec3::new(0.0, 0.0, 0.0);
     
     // SOL
     let mut sun = Planet {

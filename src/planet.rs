@@ -14,8 +14,8 @@ pub struct Planet {
 
 impl Planet {
     pub fn new(orbit_radius: f32, scale: f32, orbit_speed: f32, rotation_speed: f32, initial_angle: f32) -> Self {
-        let center_x = 400.0;
-        let center_y = 300.0;
+        let center_x = 0.0;  // Centro en el origen del mundo
+        let center_y = 0.0;
         
         let translation = Vec3::new(
             center_x + orbit_radius * initial_angle.cos(),
