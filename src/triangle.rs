@@ -3,7 +3,7 @@ use crate::fragment::Fragment;
 use crate::vertex::Vertex;
 use crate::color::Color;
 
-pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex, sun_position: &Vec3) -> Vec<Fragment> {
+pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex, sun_world_position: &Vec3, is_sun: bool) -> Vec<Fragment> {
   let mut fragments = Vec::new();
   let (a, b, c) = (v1.transformed_position, v2.transformed_position, v3.transformed_position);
 
@@ -31,21 +31,29 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex, sun_position: &Vec3) -> V
           (v1.color.b as f32 * w1 + v2.color.b as f32 * w2 + v3.color.b as f32 * w3) as u8,
         );
         
-        // Interpolar la normal
-        let normal = (v1.transformed_normal * w1 + v2.transformed_normal * w2 + v3.transformed_normal * w3).normalize();
-        
-        // Calcular dirección de luz desde el fragmento hacia el sol (en espacio de pantalla)
-        let light_dir = ( *sun_position - point ).normalize();
-
-        // Calculate lighting intensity
-        let intensity = dot(&normal, &light_dir).max(0.0);
-        
-        // Ambient + diffuse lighting
-        let ambient = 0.2;
-        let diffuse = 0.8 * intensity;
-        let total_light = ambient + diffuse;
-        
-        let lit_color = interpolated_color * total_light;
+        // Si es el sol, no aplicar iluminación (es emisivo)
+        let lit_color = if is_sun {
+          interpolated_color  // El sol brilla por sí mismo
+        } else {
+          // Interpolar la normal EN ESPACIO MUNDIAL
+          let normal = (v1.transformed_normal * w1 + v2.transformed_normal * w2 + v3.transformed_normal * w3).normalize();
+          
+          // Interpolar la posición EN ESPACIO MUNDIAL
+          let world_position = v1.position * w1 + v2.position * w2 + v3.position * w3;
+          
+          // Calcular vector desde el fragmento HACIA el sol (fuente de luz)
+          let to_light = (*sun_world_position - world_position).normalize();
+          
+          // Dot product: positivo cuando la normal apunta hacia la luz
+          let intensity = dot(&normal, &to_light).max(0.0);
+          
+          // Ambient + diffuse lighting
+          let ambient = 0.2;
+          let diffuse = 0.8 * intensity;
+          let total_light = ambient + diffuse;
+          
+          interpolated_color * total_light
+        };
 
         // Interpolate depth
         let depth = a.z * w1 + b.z * w2 + c.z * w3;

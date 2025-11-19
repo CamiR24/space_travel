@@ -117,9 +117,9 @@ impl Camera {
     pub fn get_projection_matrix(&self, window_width: f32, window_height: f32) -> Mat4 {
         perspective(
             window_width / window_height,
-            45.0 * PI / 180.0,
+            60.0 * PI / 180.0,  // FOV más amplio (60° en lugar de 45°)
             0.1,
-            1000.0
+            2000.0  // Far plane más lejano
         )
     }
 }

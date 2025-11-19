@@ -1,4 +1,4 @@
-use nalgebra_glm::{Vec3, Vec4, Mat4};
+use nalgebra_glm::{Vec3, Mat4};
 use minifb::{Key, Window, WindowOptions};
 use std::time::{Duration, Instant};
 use std::f32::consts::PI;
@@ -96,16 +96,10 @@ fn render(
     time: f32,
     sun_world_position: Vec3
 ) {
-    // Transformar posición del sol a espacio de pantalla para iluminación correcta
-    let sun_pos_4 = Vec4::new(sun_world_position.x, sun_world_position.y, sun_world_position.z, 1.0);
-    let sun_clip = uniforms.projection_matrix * uniforms.view_matrix * sun_pos_4;
-    let sun_ndc = Vec3::new(
-        sun_clip.x / sun_clip.w,
-        sun_clip.y / sun_clip.w,
-        sun_clip.z / sun_clip.w
-    );
-    let sun_screen_4 = uniforms.viewport_matrix * Vec4::new(sun_ndc.x, sun_ndc.y, sun_ndc.z, 1.0);
-    let sun_screen_position = Vec3::new(sun_screen_4.x, sun_screen_4.y, sun_screen_4.z);
+    // Ya NO transformamos la posición del sol - usamos la posición mundial directamente
+    // La iluminación se calcula en el espacio mundial dentro de triangle()
+    
+    let is_sun = planet_type == PlanetType::Sun;
 
     let mut transformed_vertices = Vec::with_capacity(vertex_array.len());
     for vertex in vertex_array {
@@ -127,7 +121,8 @@ fn render(
 
     let mut fragments = Vec::new();
     for tri in &triangles {
-        fragments.extend(triangle(&tri[0], &tri[1], &tri[2], &sun_screen_position));
+        // Pasamos la posición mundial del sol y si es el sol mismo
+        fragments.extend(triangle(&tri[0], &tri[1], &tri[2], &sun_world_position, is_sun));
     }
 
     for fragment in fragments {
@@ -173,7 +168,7 @@ fn main() {
 
     // Crear cámara - mirando desde atrás hacia el origen
     let mut camera = Camera::new(
-        Vec3::new(0.0, 0.0, 500.0),  // eye - detrás en Z
+        Vec3::new(0.0, 0.0, 900.0),  // eye - MÁS LEJOS para ver todos los planetas
         Vec3::new(0.0, 0.0, 0.0),    // center - origen
         Vec3::new(0.0, 1.0, 0.0),    // up
     );
@@ -197,15 +192,15 @@ fn main() {
     // PLANETAS (5 planetas para conseguir 50 puntos)
     let mut planets = vec![
         // Mercurio - Rocoso pequeño
-        Planet::new(120.0, 15.0, 0.04, 0.03, 0.0),
+        Planet::new(180.0, 15.0, 0.04, 0.03, 0.0),
         // Venus - Rocoso
-        Planet::new(180.0, 25.0, 0.03, 0.025, PI / 4.0),
+        Planet::new(240.0, 25.0, 0.03, 0.025, PI / 4.0),
         // Tierra - Normal con agua
-        Planet::new(250.0, 28.0, 0.025, 0.02, PI / 2.0),
+        Planet::new(310.0, 28.0, 0.025, 0.02, PI / 2.0),
         // Marte - Rocoso rojo
-        Planet::new(320.0, 22.0, 0.02, 0.018, 3.0 * PI / 4.0),
+        Planet::new(380.0, 22.0, 0.02, 0.018, 3.0 * PI / 4.0),
         // Júpiter - Gaseoso grande
-        Planet::new(450.0, 55.0, 0.01, 0.04, PI),
+        Planet::new(530.0, 55.0, 0.01, 0.04, PI),
     ];
 
     // Configurar profundidad Z para cada planeta
@@ -216,7 +211,7 @@ fn main() {
     let planet_types = [
         PlanetType::Rocky,   // Mercurio
         PlanetType::Rocky,   // Venus
-        PlanetType::Normal,  // Tierra
+        PlanetType::Gaseous,  // Tierra
         PlanetType::Rocky,   // Marte
         PlanetType::Gaseous, // Júpiter
     ];
@@ -383,6 +378,16 @@ fn main() {
             projection_matrix,
             viewport_matrix,
         };
+        
+        // Debug: Imprimir posición del sol cada 100 frames
+        static mut FRAME_COUNT: u32 = 0;
+        unsafe {
+            FRAME_COUNT += 1;
+            if FRAME_COUNT % 100 == 0 {
+                println!("Sol posición mundial: {:?}", sun.translation);
+            }
+        }
+        
         render(
             &mut framebuffer,
             &sun_uniforms,

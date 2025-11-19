@@ -10,7 +10,15 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
         1.0
     );
     
-    // Model -> World -> View -> Clip
+    // Calcular posición mundial (solo modelo, sin vista ni proyección)
+    let world_position_4 = uniforms.model_matrix * position;
+    let world_position = Vec3::new(
+        world_position_4.x,
+        world_position_4.y,
+        world_position_4.z
+    );
+    
+    // Model -> World -> View -> Clip (para renderizado)
     let clip_space = uniforms.projection_matrix 
         * uniforms.view_matrix 
         * uniforms.model_matrix 
@@ -33,7 +41,7 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
         screen.z
     );
 
-    // Transform normal
+    // Transform normal (en espacio mundial)
     let model_mat3 = Mat3::new(
         uniforms.model_matrix[0], uniforms.model_matrix[1], uniforms.model_matrix[2],
         uniforms.model_matrix[4], uniforms.model_matrix[5], uniforms.model_matrix[6],
@@ -43,7 +51,7 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
     let transformed_normal = (model_mat3 * vertex.normal).normalize();
 
     Vertex {
-        position: vertex.position,
+        position: world_position,  // IMPORTANTE: Guardamos la posición MUNDIAL, no la original
         normal: vertex.normal,
         tex_coords: vertex.tex_coords,
         color: vertex.color,
