@@ -14,6 +14,7 @@ mod shaders;
 mod planet;
 mod gaseous_shader;
 mod camera;
+mod spaceship;
 
 use framebuffer::Framebuffer;
 use vertex::Vertex;
@@ -24,6 +25,7 @@ use planet::Planet;
 use color::Color;
 use gaseous_shader::{gaseous_shader, rocky_shader, sun_shader};
 use camera::Camera;
+use spaceship::Spaceship;
 
 pub struct Uniforms {
     model_matrix: Mat4,
@@ -38,6 +40,7 @@ pub enum PlanetType {
     Gaseous,
     Rocky,
     Normal,
+    Spaceship,
 }
 
 fn create_model_matrix(translation: Vec3, scale: f32, rotation: Vec3) -> Mat4 {
@@ -96,9 +99,6 @@ fn render(
     time: f32,
     sun_world_position: Vec3
 ) {
-    // Ya NO transformamos la posición del sol - usamos la posición mundial directamente
-    // La iluminación se calcula en el espacio mundial dentro de triangle()
-    
     let is_sun = planet_type == PlanetType::Sun;
 
     let mut transformed_vertices = Vec::with_capacity(vertex_array.len());
@@ -121,7 +121,6 @@ fn render(
 
     let mut fragments = Vec::new();
     for tri in &triangles {
-        // Pasamos la posición mundial del sol y si es el sol mismo
         fragments.extend(triangle(&tri[0], &tri[1], &tri[2], &sun_world_position, is_sun));
     }
 
@@ -134,6 +133,7 @@ fn render(
                 PlanetType::Gaseous => gaseous_shader(&fragment, fragment.color, time),
                 PlanetType::Rocky => rocky_shader(&fragment, fragment.color),
                 PlanetType::Normal => fragment.color,
+                PlanetType::Spaceship => fragment.color,
             };
             
             let color = final_color.to_hex();
@@ -165,6 +165,12 @@ fn main() {
     // Cargar modelos
     let sphere_obj = Obj::load("assets/models/sphere_smooth.obj").expect("Failed to load sphere");
     let vertex_arrays = sphere_obj.get_vertex_array();
+    
+    // Cargar nave espacial
+    let spaceship_obj = Obj::load("assets/models/spaceship.obj").expect("Failed to load spaceship");
+    let spaceship_vertices = spaceship_obj.get_vertex_array();
+    
+    println!("Nave cargada con {} vértices", spaceship_vertices.len());
 
     // Crear cámara - mirando desde atrás hacia el origen
     let mut camera = Camera::new(
@@ -172,6 +178,9 @@ fn main() {
         Vec3::new(0.0, 0.0, 0.0),    // center - origen
         Vec3::new(0.0, 1.0, 0.0),    // up
     );
+    
+    // Crear sistema de nave espacial
+    let mut spaceship = Spaceship::new();
 
     // Configuración del sistema solar - centrado en el origen
     let center = Vec3::new(0.0, 0.0, 0.0);
@@ -192,15 +201,15 @@ fn main() {
     // PLANETAS (5 planetas para conseguir 50 puntos)
     let mut planets = vec![
         // Mercurio - Rocoso pequeño
-        Planet::new(180.0, 15.0, 0.04, 0.03, 0.0),
+        Planet::new(120.0, 15.0, 0.04, 0.03, 0.0),
         // Venus - Rocoso
-        Planet::new(240.0, 25.0, 0.03, 0.025, PI / 4.0),
+        Planet::new(180.0, 25.0, 0.03, 0.025, PI / 4.0),
         // Tierra - Normal con agua
-        Planet::new(310.0, 28.0, 0.025, 0.02, PI / 2.0),
+        Planet::new(250.0, 28.0, 0.025, 0.02, PI / 2.0),
         // Marte - Rocoso rojo
-        Planet::new(380.0, 22.0, 0.02, 0.018, 3.0 * PI / 4.0),
+        Planet::new(320.0, 22.0, 0.02, 0.018, 3.0 * PI / 4.0),
         // Júpiter - Gaseoso grande
-        Planet::new(530.0, 55.0, 0.01, 0.04, PI),
+        Planet::new(450.0, 55.0, 0.01, 0.04, PI),
     ];
 
     // Configurar profundidad Z para cada planeta
@@ -211,7 +220,7 @@ fn main() {
     let planet_types = [
         PlanetType::Rocky,   // Mercurio
         PlanetType::Rocky,   // Venus
-        PlanetType::Gaseous,  // Tierra
+        PlanetType::Normal,  // Tierra
         PlanetType::Rocky,   // Marte
         PlanetType::Gaseous, // Júpiter
     ];
@@ -242,6 +251,10 @@ fn main() {
     println!("  M: Activar/Desactivar modo 3D");
     println!("  A/D o ←/→: Rotar horizontalmente");
     println!("  ↑/↓: Rotar verticalmente");
+    println!("\nNave Espacial:");
+    println!("  I/K: Mover nave arriba/abajo");
+    println!("  J/L: Mover nave izquierda/derecha");
+    println!("  U/O: Mover nave cerca/lejos");
     println!("\nWarp:");
     println!("  1-5: Warp a planetas");
     println!("  0: Warp al sol");
@@ -294,6 +307,26 @@ fn main() {
         }
         if window.is_key_down(Key::E) {
             camera.change_height(-5.0);
+        }
+        
+        // Controles de la nave espacial
+        if window.is_key_down(Key::I) {
+            spaceship.adjust_offset(0.0, 1.0, 0.0);  // Arriba
+        }
+        if window.is_key_down(Key::K) {
+            spaceship.adjust_offset(0.0, -1.0, 0.0);  // Abajo
+        }
+        if window.is_key_down(Key::J) {
+            spaceship.adjust_offset(-1.0, 0.0, 0.0);  // Izquierda
+        }
+        if window.is_key_down(Key::L) {
+            spaceship.adjust_offset(1.0, 0.0, 0.0);  // Derecha
+        }
+        if window.is_key_down(Key::U) {
+            spaceship.adjust_offset(0.0, 0.0, -1.0);  // Más cerca
+        }
+        if window.is_key_down(Key::O) {
+            spaceship.adjust_offset(0.0, 0.0, 1.0);  // Más lejos
         }
         
         // Toggle modo 3D
@@ -379,15 +412,6 @@ fn main() {
             viewport_matrix,
         };
         
-        // Debug: Imprimir posición del sol cada 100 frames
-        static mut FRAME_COUNT: u32 = 0;
-        unsafe {
-            FRAME_COUNT += 1;
-            if FRAME_COUNT % 100 == 0 {
-                println!("Sol posición mundial: {:?}", sun.translation);
-            }
-        }
-        
         render(
             &mut framebuffer,
             &sun_uniforms,
@@ -421,6 +445,30 @@ fn main() {
                 sun.translation
             );
         }
+        
+        // Renderizar nave espacial (al final para que se vea encima)
+        let spaceship_position = spaceship.get_world_position(&camera);
+        let spaceship_rotation = spaceship.get_world_rotation(&camera);
+        let spaceship_model_matrix = create_model_matrix(
+            spaceship_position,
+            spaceship.scale,
+            spaceship_rotation
+        );
+        let spaceship_uniforms = Uniforms {
+            model_matrix: spaceship_model_matrix,
+            view_matrix,
+            projection_matrix,
+            viewport_matrix,
+        };
+        render(
+            &mut framebuffer,
+            &spaceship_uniforms,
+            &spaceship_vertices,
+            0xCCCCCC,  // Gris metálico
+            PlanetType::Spaceship,
+            time,
+            sun.translation
+        );
 
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
