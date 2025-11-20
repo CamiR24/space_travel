@@ -22,18 +22,37 @@ fn fbm(x: f32, y: f32, octaves: i32) -> f32 {
 } 
 
 // Shader para el sol (emisivo, sin iluminación) 
-pub fn sun_shader(fragment: &Fragment, base_color: Color, time: f32) -> Color { 
-    let x = fragment.position.x; 
-    let y = fragment.position.y; 
-    // Agregar "actividad solar" con ruido animado 
-    let activity = fbm(x * 0.03 + time * 2.0, y * 0.03 + time * 1.5, 2); 
-    let intensity = 1.0 + activity * 0.3;  // Más intensidad para el sol
-    
-    Color::new( 
-        ((base_color.r as f32 * intensity).min(255.0)) as u8, 
-        ((base_color.g as f32 * intensity).min(255.0)) as u8, 
-        ((base_color.b as f32 * intensity).min(255.0)) as u8, 
-    ) 
+pub fn sun_shader(fragment: &Fragment, base_color: Color, time: f32) -> Color {
+    let x = fragment.position.x;
+    let y = fragment.position.y;
+
+    // ⬇️ Centro aproximado de la ventana (tu ventana es 1200x800)
+    let cx = 600.0;
+    let cy = 400.0;
+
+    // Distancia del fragmento al centro del sol en pantalla
+    let dx = x - cx;
+    let dy = y - cy;
+    let dist = (dx * dx + dy * dy).sqrt();
+
+    // Radio aproximado del disco del sol en píxeles (ajusta si lo ves muy fuerte/suave)
+    let max_radius = 120.0;
+    let t = (dist / max_radius).min(1.0);
+
+    // Gradiente: centro brillante, borde más oscuro (1.0 → 0.5)
+    let base_intensity = 1.0 - 0.5 * t;
+
+    // Ruido animado para la actividad solar
+    let activity = fbm(x * 0.03 + time * 2.0, y * 0.03 + time * 1.5, 2);
+    let flicker = 1.0 + activity * 0.3;
+
+    let intensity = base_intensity * flicker;
+
+    Color::new(
+        ((base_color.r as f32 * intensity).min(255.0)) as u8,
+        ((base_color.g as f32 * intensity).min(255.0)) as u8,
+        ((base_color.b as f32 * intensity).min(255.0)) as u8,
+    )
 }
 
 // Shader para planeta gaseoso (como Júpiter)         

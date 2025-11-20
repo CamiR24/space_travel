@@ -20,6 +20,7 @@ use framebuffer::Framebuffer;
 use vertex::Vertex;
 use obj::Obj;
 use triangle::triangle;
+use line::line;
 use shaders::vertex_shader;
 use planet::Planet;
 use color::Color;
@@ -217,6 +218,34 @@ fn main() {
         planet.translation.z = (i as f32 - 2.0) * 50.0;
     }
 
+    const ORBIT_SEGMENTS: usize = 120;
+
+    // Para cada planeta (que no sea el sol, radio 0) creamos un anillo de vértices
+    let mut orbit_vertex_rings: Vec<Vec<Vertex>> = Vec::new();
+
+    for planet in &planets {
+        // Ignorar "órbita" del sol (radio 0)
+        if planet.orbit_radius <= 0.0 {
+            continue;
+        }
+
+        let mut ring: Vec<Vertex> = Vec::with_capacity(ORBIT_SEGMENTS);
+
+        for i in 0..ORBIT_SEGMENTS {
+            let angle = 2.0 * PI * (i as f32) / (ORBIT_SEGMENTS as f32);
+            let x = planet.center_x + planet.orbit_radius * angle.cos();
+            let y = planet.center_y + planet.orbit_radius * angle.sin();
+            let z = planet.translation.z; // misma profundidad aproximada que el planeta
+
+            let mut v = Vertex::default();
+            v.position = Vec3::new(x, y, z);
+            v.color = Color::from_hex(0xAAAAAA); // color base de la órbita
+            ring.push(v);
+        }
+
+        orbit_vertex_rings.push(ring);
+    }
+
     let planet_types = [
         PlanetType::Rocky,   // Mercurio
         PlanetType::Rocky,   // Venus
@@ -402,6 +431,48 @@ fn main() {
             framebuffer_width as f32,
             framebuffer_height as f32
         );
+
+        let orbit_model_matrix = Mat4::new(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        );
+
+        let orbit_uniforms = Uniforms {
+            model_matrix: orbit_model_matrix,
+            view_matrix,
+            projection_matrix,
+            viewport_matrix,
+        };
+
+        for ring in &orbit_vertex_rings {
+            // 1) Transformar cada vértice de la órbita a espacio de pantalla
+            let mut transformed_ring: Vec<Vertex> = Vec::with_capacity(ring.len());
+            for v in ring {
+                transformed_ring.push(vertex_shader(v, &orbit_uniforms));
+            }
+
+            // 2) Generar fragments uniendo vértices consecutivos con líneas
+            let mut orbit_fragments = Vec::new();
+            let n = transformed_ring.len();
+            for i in 0..n {
+                let a = &transformed_ring[i];
+                let b = &transformed_ring[(i + 1) % n]; // cerrar el círculo
+                orbit_fragments.extend(line(a, b));
+            }
+
+            // 3) Pintar los fragments en el framebuffer
+            for fragment in orbit_fragments {
+                let x = fragment.position.x as usize;
+                let y = fragment.position.y as usize;
+
+                if x < framebuffer_width && y < framebuffer_height {
+                    framebuffer.set_current_color(0x666666); // color final de las órbitas
+                    framebuffer.point(x, y, fragment.depth);
+                }
+            }
+        }
 
         // Renderizar el sol
         let sun_model_matrix = create_model_matrix(sun.translation, sun.scale, sun.rotation);
