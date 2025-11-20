@@ -163,7 +163,7 @@ fn main() {
     framebuffer.set_background_color(0x000011);
 
     // Cargar modelos
-    let sphere_obj = Obj::load("assets/models/sphere_smooth.obj").expect("Failed to load sphere");
+    let sphere_obj = Obj::load("assets/models/sphere.obj").expect("Failed to load sphere");
     let vertex_arrays = sphere_obj.get_vertex_array();
     
     // Cargar nave espacial
@@ -191,7 +191,7 @@ fn main() {
         rotation: Vec3::new(0.0, 0.0, 0.0),
         scale: 80.0,
         orbit_speed: 0.0,
-        rotation_speed: 0.01,
+        rotation_speed: 0.0,
         orbit_radius: 0.0,
         orbit_angle: 0.0,
         center_x: center.x,

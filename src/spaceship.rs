@@ -11,9 +11,9 @@ impl Spaceship {
     pub fn new() -> Self {
         Spaceship {
             // Posición relativa a la cámara (adelante y a la derecha)
-            offset: Vec3::new(40.0, -30.0, -100.0),  // x: derecha, y: abajo, z: adelante
+            offset: Vec3::new(0.0, -20.0, -70.0),  // x: derecha, y: abajo, z: adelante
             rotation: Vec3::new(0.0, 0.0, 0.0),
-            scale: 10.0,  // Escala inicial de la nave
+            scale: 5.0,  // Escala inicial de la nave
         }
     }
     
