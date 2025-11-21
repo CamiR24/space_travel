@@ -202,15 +202,15 @@ fn main() {
     // PLANETAS (5 planetas para conseguir 50 puntos)
     let mut planets = vec![
         // Mercurio - Rocoso pequeño
-        Planet::new(120.0, 15.0, 0.04, 0.03, 0.0),
+        Planet::new(180.0, 15.0, 0.04, 0.03, 0.0),
         // Venus - Rocoso
-        Planet::new(180.0, 25.0, 0.03, 0.025, PI / 4.0),
+        Planet::new(240.0, 25.0, 0.03, 0.025, PI / 4.0),
         // Tierra - Normal con agua
-        Planet::new(250.0, 28.0, 0.025, 0.02, PI / 2.0),
+        Planet::new(310.0, 28.0, 0.025, 0.02, PI / 2.0),
         // Marte - Rocoso rojo
-        Planet::new(320.0, 22.0, 0.02, 0.018, 3.0 * PI / 4.0),
+        Planet::new(380.0, 22.0, 0.02, 0.018, 3.0 * PI / 4.0),
         // Júpiter - Gaseoso grande
-        Planet::new(450.0, 55.0, 0.01, 0.04, PI),
+        Planet::new(510.0, 55.0, 0.01, 0.04, PI),
     ];
 
     // Configurar profundidad Z para cada planeta
